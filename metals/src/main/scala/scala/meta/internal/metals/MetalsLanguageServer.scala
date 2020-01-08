@@ -49,6 +49,10 @@ import com.google.gson.JsonPrimitive
 import scala.meta.internal.worksheets.WorksheetProvider
 import scala.meta.internal.worksheets.DecorationWorksheetPublisher
 import scala.meta.internal.worksheets.WorkspaceEditWorksheetPublisher
+import scala.meta.internal.notebooks.NotebookProvider
+import scala.meta.internal.notebooks.MarkdownCodelensNotebookClient
+import scala.meta.internal.notebooks.NotebookCommands
+import scala.meta.internal.notebooks.NotebookCommands._
 import scala.meta.internal.rename.RenameProvider
 import ch.epfl.scala.bsp4j.CompileReport
 import java.{util => ju}
@@ -184,6 +188,7 @@ class MetalsLanguageServer(
   var httpServer: Option[MetalsHttpServer] = None
   var treeView: TreeViewProvider = NoopTreeViewProvider
   var worksheetProvider: WorksheetProvider = _
+  var notebookProvider: NotebookProvider = _
 
   def connectToLanguageClient(client: MetalsLanguageClient): Unit = {
     languageClient.underlying = new ConfiguredLanguageClient(client, config)(ec)
@@ -436,6 +441,10 @@ class MetalsLanguageServer(
         worksheetPublisher
       )
     )
+    notebookProvider = new NotebookProvider(
+      buildTargets,
+      new MarkdownCodelensNotebookClient(languageClient, buffers)
+    )
     if (clientExperimentalCapabilities.treeViewProvider) {
       treeView = new MetalsTreeViewProvider(
         () => workspace,
@@ -471,7 +480,7 @@ class MetalsLanguageServer(
       val capabilities = new ServerCapabilities()
       capabilities.setExecuteCommandProvider(
         new ExecuteCommandOptions(
-          ServerCommands.all.map(_.id).asJava
+          (ServerCommands.all ++ NotebookCommands.all).map(_.id).asJava
         )
       )
       capabilities.setFoldingRangeProvider(true)
@@ -1105,7 +1114,11 @@ class MetalsLanguageServer(
   ): CompletableFuture[util.List[CodeLens]] =
     CancelTokens { _ =>
       val path = params.getTextDocument.getUri.toAbsolutePath
-      val lenses = codeLensProvider.findLenses(path)
+      val lenses =
+        if (path.isNotebook)
+          notebookProvider.findCodeLenses(path)
+        else
+          codeLensProvider.findLenses(path)
       lenses.asJava
     }
 
@@ -1234,6 +1247,10 @@ class MetalsLanguageServer(
             val msg = s"Invalid arguments: $args. Expecting: $argExample"
             Future.failed(new IllegalArgumentException(msg)).asJavaObject
         }
+      case cmd if cmd.isNotebookCommand =>
+        notebookProvider
+          .executeCommand(cmd, params.getArguments().asScala)
+          .asJavaObject
       case cmd =>
         scribe.error(s"Unknown command '$cmd'")
         Future.successful(()).asJavaObject

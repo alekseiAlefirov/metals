@@ -253,6 +253,10 @@ class WorksheetProvider(
         val scalacOptions = info.scalac.getOptions.asScala
           .filterNot(_.contains("semanticdb"))
           .asJava
+        //todo: delete this
+        scribe.info(
+          "WORKSHEETPORVIDER, fullclasspath = " + info.fullClasspath.asScala
+        )
         val mdoc = embedded
           .mdoc(scala)
           .withClasspath(info.fullClasspath.asScala.distinct.asJava)

@@ -112,7 +112,6 @@ object Embedded {
       s"mdoc_${info.getScalaBinaryVersion()}",
       BuildInfo.mdocVersion
     )
-    val settings = fetchSettings(mdoc, info.getScalaVersion())
     val jars = fetchSettings(mdoc, info.getScalaVersion()).fetch()
     val parent =
       new MdocClassLoader(this.getClass.getClassLoader)
