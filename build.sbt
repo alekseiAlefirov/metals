@@ -109,7 +109,8 @@ inThisBuild(
         }
         .mkString(" ")
     },
-    resolvers += Resolver.bintrayRepo("scalacenter", "releases")
+    resolvers += Resolver.bintrayRepo("scalacenter", "releases"),
+    resolvers += "jitpack" at "https://jitpack.io" //for missing jvm-repr dependency of almond, TODO: fix coursier bootstrap
   )
 )
 
@@ -154,6 +155,7 @@ lazy val V = new {
   val gradleBloop = bloop
   val mavenBloop = bloop
   val mdoc = "2.0.3"
+  val almond = "0.9.0"
   val scalafmt = "2.3.2"
   // List of supported Scala versions in SemanticDB. Needs to be manually updated
   // for every SemanticDB upgrade.
@@ -274,6 +276,7 @@ lazy val metals = project
       // ==================
       "org.scala-lang.modules" %% "scala-java8-compat" % "0.9.0",
       "org.scalameta" % "mdoc-interfaces" % V.mdoc,
+      "sh.almond" % "scala-interpreter" % V.almond cross CrossVersion.full,
       "org.scalameta" %% "scalafmt-dynamic" % V.scalafmt,
       // For reading classpaths.
       // for fetching ch.epfl.scala:bloop-frontend and other library dependencies
@@ -295,6 +298,7 @@ lazy val metals = project
       "localSnapshotVersion" -> localSnapshotVersion,
       "metalsVersion" -> version.value,
       "mdocVersion" -> V.mdoc,
+      "almondVersion" -> V.almond,
       "bspVersion" -> V.bsp,
       "bloopVersion" -> V.bloop,
       "sbtBloopVersion" -> V.sbtBloop,

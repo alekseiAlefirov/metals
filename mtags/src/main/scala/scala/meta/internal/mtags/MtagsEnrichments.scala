@@ -113,6 +113,9 @@ trait MtagsEnrichments {
     def isWorksheet: Boolean = {
       filename.endsWith(".worksheet.sc")
     }
+    def isNotebook: Boolean = {
+      filename.endsWith(".notebook.sc")
+    }
     def isScalaFilename: Boolean = {
       filename.isScalaFilename
     }
