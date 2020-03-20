@@ -121,6 +121,8 @@ class MetalsLanguageServer(
   private val languageClient = new DelegatingLanguageClient(NoopLanguageClient)
   var userConfig: UserConfiguration = UserConfiguration()
   val buildTargets: BuildTargets = new BuildTargets()
+  private val buildTargetClassesFinder =
+    new BuildTargetClassesFinder(buildTargets, buildTargetClasses)
   val compilations: Compilations = new Compilations(
     buildTargets,
     buildTargetClasses,
@@ -136,7 +138,7 @@ class MetalsLanguageServer(
       params => didChangeWatchedFiles(params)
     )
   )
-  private val indexingPromise = Promise[Unit]()
+  val indexingPromise: Promise[Unit] = Promise[Unit]()
   val parseTrees = new BatchedFunction[AbsolutePath, Unit](paths =>
     CancelableFuture(paths.distinct.foreach(trees.didChange))
   )
@@ -1298,8 +1300,7 @@ class MetalsLanguageServer(
             Future.fromTry(
               DebugServer.resolveMainClassParams(
                 params,
-                buildTargets,
-                buildTargetClasses,
+                buildTargetClassesFinder,
                 languageClient.showMessage(MessageType.Warning, _)
               )
             )
@@ -1308,8 +1309,7 @@ class MetalsLanguageServer(
             Future.fromTry(
               DebugServer.resolveTestClassParams(
                 params,
-                buildTargets,
-                buildTargetClasses,
+                buildTargetClassesFinder,
                 languageClient.showMessage(MessageType.Warning, _)
               )
             )
@@ -1563,7 +1563,10 @@ class MetalsLanguageServer(
       i <- statusBar.trackFuture("Importing build", importedBuild)
       _ <- profiledIndexWorkspace(
         () => indexWorkspace(i),
-        () => indexingPromise.trySuccess(())
+        () => {
+          indexingPromise.trySuccess(())
+          languageClient.refreshModel()
+        }
       )
       _ = checkRunningBloopVersion(i.bspServerVersion)
       _ <- Future.sequence[Unit, List](
@@ -1662,7 +1665,7 @@ class MetalsLanguageServer(
     val elapsed = new Timer(time)
     val result = thunk
     result.map { value =>
-      if (elapsed.isLogWorthy) {
+      if (reportStatus || elapsed.isLogWorthy) {
         scribe.info(s"time: $didWhat in $elapsed")
       }
       (elapsed, value)
@@ -1670,18 +1673,15 @@ class MetalsLanguageServer(
   }
 
   def profiledIndexWorkspace(
-      thunk: () => Unit,
+      thunk: () => Future[Unit],
       onFinally: () => Unit
   ): Future[Unit] = {
     val tracked = statusBar.trackFuture(
       s"Indexing",
-      Future {
-        timedThunk("indexed workspace", onlyIf = true) {
-          try thunk()
-          finally {
-            onFinally()
-          }
-        }
+      timed("indexed workspace", reportStatus = true) {
+        val t = thunk()
+        t.onComplete(_ => onFinally())
+        t
       }
     )
     tracked.foreach { _ =>
@@ -1717,7 +1717,7 @@ class MetalsLanguageServer(
     scribe.info(s"memory: $footprint")
   }
 
-  def indexWorkspace(i: ImportedBuild): Unit = {
+  def indexWorkspace(i: ImportedBuild): Future[Unit] = {
     timedThunk("updated build targets", config.statistics.isIndex) {
       buildTargets.reset()
       interactiveSemanticdbs.reset()
@@ -1777,7 +1777,6 @@ class MetalsLanguageServer(
     val targets = buildTargets.all.map(_.id).toSeq
     buildTargetClasses
       .rebuildIndex(targets)
-      .foreach(_ => languageClient.refreshModel())
   }
 
   private def checkRunningBloopVersion(bspServerVersion: String) = {
