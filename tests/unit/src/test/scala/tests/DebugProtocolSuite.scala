@@ -129,7 +129,8 @@ class DebugProtocolSuite extends BaseLspSuite("debug-protocol") {
            |}
            |""".stripMargin
       )
-      _ = Thread.sleep(2000)
+      //todo: delete this
+      _ = Thread.sleep(20000)
       _ <- server.server.onLatestCycleCompleted()
       debugger <- server.startDebuggingUnresolved(
         new DebugUnresolvedMainClassParams(
@@ -164,6 +165,8 @@ class DebugProtocolSuite extends BaseLspSuite("debug-protocol") {
            |}
            |""".stripMargin
       )
+      //todo: delete this
+      _ = Thread.sleep(20000)
       _ <- server.server.onLatestCycleCompleted()
       debugger <- server.startDebuggingUnresolved(
         new DebugUnresolvedTestClassParams(
