@@ -130,7 +130,8 @@ class DebugProtocolSuite extends BaseLspSuite("debug-protocol") {
            |""".stripMargin
       )
       //todo: delete this
-      _ = Thread.sleep(20000)
+      //_ = Thread.sleep(20000)
+      _ <- server.didOpen("a/src/main/scala/a/Main.scala")
       _ <- server.server.onLatestCycleCompleted()
       debugger <- server.startDebuggingUnresolved(
         new DebugUnresolvedMainClassParams(
@@ -166,7 +167,8 @@ class DebugProtocolSuite extends BaseLspSuite("debug-protocol") {
            |""".stripMargin
       )
       //todo: delete this
-      _ = Thread.sleep(20000)
+      //_ = Thread.sleep(20000)
+      _ <- server.didOpen("a/src/main/scala/a/Foo.scala")
       _ <- server.server.onLatestCycleCompleted()
       debugger <- server.startDebuggingUnresolved(
         new DebugUnresolvedTestClassParams(
