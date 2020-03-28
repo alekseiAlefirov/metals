@@ -1775,6 +1775,9 @@ class MetalsLanguageServer(
     }
 
     val targets = buildTargets.all.map(_.id).toSeq
+    //TODO: delete this
+    pprint.log("Calling rebuildIndex from 'indexWorkSpace' for targets:")
+    pprint.log(targets.map(_.getUri().toString()).mkString("\n"))
     buildTargetClasses
       .rebuildIndex(targets)
       .foreach(_ => languageClient.refreshModel())

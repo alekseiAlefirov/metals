@@ -41,11 +41,17 @@ final class Compilations(
   def compileTargets(
       targets: Seq[b.BuildTargetIdentifier]
   ): Future[b.CompileResult] = {
+    //TODO: delete this
+    pprint.log("Calling compileBatch from 'compileTargets' for targets:")
+    pprint.log(targets.map(_.getUri().toString()).mkString("\n"))
     compileBatch(targets)
   }
 
   def compileFiles(paths: Seq[AbsolutePath]): Future[b.CompileResult] = {
     val targets = expand(paths)
+    //TODO: delete this
+    pprint.log("Calling compileBatch from 'compileFiles' for targets:")
+    pprint.log(targets.map(_.getUri().toString()).mkString("\n"))
     for {
       result <- compileBatch(targets)
       _ <- compileWorksheets(paths)
@@ -55,6 +61,9 @@ final class Compilations(
   def cascadeCompileFiles(paths: Seq[AbsolutePath]): Future[b.CompileResult] = {
     val targets =
       expand(paths).flatMap(buildTargets.inverseDependencies).distinct
+    //TODO: delete this
+    pprint.log("Calling cascadeBatch from 'cascadeCompileFiles' for targets:")
+    pprint.log(targets.map(_.getUri().toString()).mkString("\n"))
     for {
       result <- cascadeBatch(targets)
       _ <- compileWorksheets(paths)
@@ -115,6 +124,9 @@ final class Compilations(
         case result =>
           updateCompiledTargetState(result)
 
+          //TODO: delete this
+          pprint.log("Calling rebuildIndex from 'compile' for targets:")
+          pprint.log(targets.map(_.getUri().toString()).mkString("\n"))
           // See https://github.com/scalacenter/bloop/issues/1067
           classes.rebuildIndex(targets).foreach { _ =>
             if (targets.exists(isCurrentlyFocused)) {
